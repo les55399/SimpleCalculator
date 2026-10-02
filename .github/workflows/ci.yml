@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Show the compiler
+        run: g++ --version
+
+      - name: Build
+        run: make all
+
+      - name: Run the test suite
+        run: make test
+
+      - name: Run the test suite under AddressSanitizer and UndefinedBehaviorSanitizer
+        run: |
+          g++ -std=c++17 -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer \
+              -Wall -Wextra -Wpedantic -o calc_tests_asan tests.cpp
+          ./calc_tests_asan
+
+      - name: Smoke-test the built binary
+        run: |
+          test "$(./calc '3 + 4 * 2')" = "11"
+          test "$(./calc 'sqrt(16) + 0')" = "4"
+          ./calc '1 / 0' && exit 1 || test $? -eq 1
